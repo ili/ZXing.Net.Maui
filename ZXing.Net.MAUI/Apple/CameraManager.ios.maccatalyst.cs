@@ -11,6 +11,8 @@ using Microsoft.Maui;
 using MSize = Microsoft.Maui.Graphics.Size;
 using ZXing.Net.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Platform;
 
 namespace ZXing.Net.Maui;
 
@@ -49,6 +51,11 @@ internal partial class CameraManager
 		return view;
 	}
 
+	public bool IsVisible
+	{
+		get => !view.Hidden;
+		set => view.UpdateVisibility(value ? Visibility.Visible : Visibility.Hidden);
+	}
 	public void Connect()
 	{
 		UpdateCamera();

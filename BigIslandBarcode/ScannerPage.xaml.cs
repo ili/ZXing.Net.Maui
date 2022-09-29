@@ -47,4 +47,9 @@ public partial class ScannerPage : ContentPage
     {
         barcodeView.IsTorchOn = !barcodeView.IsTorchOn;
     }
+
+    private void SwitchVisibility(object sender, EventArgs e)
+    {
+        barcodeView.IsVisible = !barcodeView.IsVisible;
+    }
 }

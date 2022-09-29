@@ -26,7 +26,7 @@
 
             <Button Text="🔄️" Grid.Column="0" BackgroundColor="#aa000000" CornerRadius="8" BorderColor="Black" Clicked="SwitchCameraButton_Clicked" />
 
-            <zxing:BarcodeGeneratorView
+			<zxing:BarcodeGeneratorView
 				x:Name="barcodeGenerator"
 				Grid.Column="1"
 				HorizontalOptions="Center"
@@ -36,7 +36,14 @@
 				ForegroundColor="DarkBlue"
 				Format="QrCode"
 				Value="Bla"
-				BarcodeMargin="1" />
+				BarcodeMargin="1"
+				>
+				<zxing:BarcodeGeneratorView.GestureRecognizers>
+					<TapGestureRecognizer Tapped="SwitchVisibility"/>
+					<ClickGestureRecognizer Clicked="SwitchVisibility"/>
+				</zxing:BarcodeGeneratorView.GestureRecognizers>
+
+			</zxing:BarcodeGeneratorView> 
 
             <Button Text="💡" Grid.Column="2" BackgroundColor="#aa000000" CornerRadius="8" BorderColor="Black" Clicked="TorchButton_Clicked" />
         </Grid>

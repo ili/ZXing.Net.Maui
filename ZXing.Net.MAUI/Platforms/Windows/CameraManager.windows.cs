@@ -30,6 +30,12 @@ namespace ZXing.Net.Maui
 
 		public Size TargetCaptureResolution { get; private set; } = Size.Zero;
 
+		public bool IsVisible
+		{
+			get => false;
+			set => LogUnsupported();
+		}
+
 		public void UpdateTargetCaptureResolution(Size targetCaptureResolution)
 		{
 		}

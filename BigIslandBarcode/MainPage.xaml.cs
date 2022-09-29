@@ -5,7 +5,7 @@ using ZXing.Net.Maui;
 
 namespace BigIslandBarcode;
 
-public partial class MainPage : TabbedPage
+public partial class MainPage 
 {
 	public MainPage()
 	{

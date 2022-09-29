@@ -36,7 +36,7 @@ namespace ZXing.Net.Maui
 		ImageAnalysis imageAnalyzer;
 		PreviewView previewView;
 		IExecutorService cameraExecutor;
-		CameraSelector cameraSelector = null;
+		//CameraSelector cameraSelector = null;
 		ProcessCameraProvider cameraProvider;
 		ICamera camera;
 		FrameAnalyzer frameAnalyzer;
@@ -47,7 +47,20 @@ namespace ZXing.Net.Maui
 			previewView = new PreviewView(Context.Context);
 			cameraExecutor = Executors.NewSingleThreadExecutor();
 
+			previewView.ViewAttachedToWindow += PreviewView_ViewAttachedToWindow;
+			previewView.ViewDetachedFromWindow += PreviewView_ViewDetachedFromWindow;
+
 			return previewView;
+		}
+
+		private void PreviewView_ViewDetachedFromWindow(object sender, NativePlatformView.ViewDetachedFromWindowEventArgs e)
+		{
+			Disconnect();
+		}
+
+		private void PreviewView_ViewAttachedToWindow(object sender, NativePlatformView.ViewAttachedToWindowEventArgs e)
+		{
+			UpdateCamera();
 		}
 
 		public void Connect()
@@ -62,24 +75,6 @@ namespace ZXing.Net.Maui
 					if (cameraProvider is null)
 						cameraProvider = (ProcessCameraProvider)cameraProviderFuture.Get();
 
-					// Preview
-					if (cameraPreview is null)
-					{
-						cameraPreview = new AndroidX.Camera.Core.Preview.Builder().Build();
-						cameraPreview.SetSurfaceProvider(previewView.SurfaceProvider);
-					}
-
-					if (frameAnalyzer is null)
-					{
-						frameAnalyzer = new FrameAnalyzer((buffer, size) =>
-							FrameReady?.Invoke(
-								this,
-								new CameraFrameBufferEventArgs(new Readers.PixelBufferHolder
-								{
-									Data = buffer,
-									Size = size
-								})));
-					}
 
 					UpdateCamera();
 
@@ -89,13 +84,30 @@ namespace ZXing.Net.Maui
 
 		public void Disconnect()
 		{
-			cameraPreview.SetSurfaceProvider(null);
-			cameraPreview.Dispose();
+			cameraProvider?.UnbindAll();
+
+
+			cameraPreview?.SetSurfaceProvider(null);
+			cameraPreview?.Dispose();
 			cameraPreview = null;
 
-			cameraProvider.UnbindAll();
-			cameraProvider.Dispose();
-			cameraProvider = null;
+			imageAnalyzer?.ClearAnalyzer();
+			imageAnalyzer?.Dispose();
+			imageAnalyzer = null;
+
+			frameAnalyzer?.Dispose();
+			frameAnalyzer = null;
+
+		}
+
+		public bool IsVisible
+		{
+			get => previewView.Visibility == ViewStates.Visible;
+			set
+			{
+				previewView.Visibility = value ? ViewStates.Visible : ViewStates.Invisible;
+				UpdateCamera();
+			}
 		}
 
 		public MSize TargetCaptureResolution { get; private set; } = MSize.Zero;
@@ -110,25 +122,43 @@ namespace ZXing.Net.Maui
 
 		public void UpdateCamera()
 		{
-			// If imageAnalyzer is previously created, clear it
-			imageAnalyzer?.ClearAnalyzer();
+			Disconnect();
 
-			// Frame by frame analyze
-			imageAnalyzer = new ImageAnalysis.Builder()
-				.SetDefaultResolution(new Android.Util.Size(640, 480))
-				.SetTargetResolution(new Android.Util.Size((int)TargetCaptureResolution.Width, (int)TargetCaptureResolution.Height))
-				.SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest)
-				.Build();
-
-			imageAnalyzer.SetAnalyzer(cameraExecutor, frameAnalyzer);
-
-			if (cameraProvider != null)
+			if (cameraProvider != null && IsVisible)
 			{
-				// Unbind use cases before rebinding
-				cameraProvider.UnbindAll();
+				if (frameAnalyzer is null)
+				{
+					frameAnalyzer = new FrameAnalyzer((buffer, size) =>
+						FrameReady?.Invoke(
+							this,
+							new CameraFrameBufferEventArgs(new Readers.PixelBufferHolder
+							{
+								Data = buffer,
+								Size = size
+							})));
+				}
 
+				// Frame by frame analyze
+				imageAnalyzer = new ImageAnalysis.Builder()
+					.SetDefaultResolution(new Android.Util.Size(640, 480))
+					.SetOutputImageRotationEnabled(true)
+					.SetTargetResolution(new Android.Util.Size((int)TargetCaptureResolution.Width, (int)TargetCaptureResolution.Height))
+					.SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest)
+					.Build();
+
+				imageAnalyzer.SetAnalyzer(cameraExecutor, frameAnalyzer);
+				
+				// Unbind use cases before rebinding
 				var cameraLocation = CameraLocation;
 
+				// Preview
+				if (cameraPreview is null)
+				{
+					cameraPreview = new AndroidX.Camera.Core.Preview.Builder().Build();
+					cameraPreview.SetSurfaceProvider(previewView.SurfaceProvider);
+				}
+
+				CameraSelector cameraSelector = null;
 				// Select back camera as a default, or front camera otherwise
 				if (cameraLocation == CameraLocation.Rear && cameraProvider.HasCamera(CameraSelector.DefaultBackCamera))
 					cameraSelector = CameraSelector.DefaultBackCamera;
@@ -141,8 +171,13 @@ namespace ZXing.Net.Maui
 					throw new System.Exception("Camera not found");
 
 				// The Context here SHOULD be something that's a lifecycle owner
-				if (Context.Context is AndroidX.Lifecycle.ILifecycleOwner lifecycleOwner)
+				if (previewView.Context is AndroidX.Lifecycle.ILifecycleOwner previewViewLifecycleOwner)
+					camera = cameraProvider.BindToLifecycle(previewViewLifecycleOwner, cameraSelector, cameraPreview, imageAnalyzer);
+				else if (Context.Context is AndroidX.Lifecycle.ILifecycleOwner lifecycleOwner)
 					camera = cameraProvider.BindToLifecycle(lifecycleOwner, cameraSelector, cameraPreview, imageAnalyzer);
+				// if not, this should be sufficient as a fallback
+				else if (Microsoft.Maui.ApplicationModel.Platform.CurrentActivity is AndroidX.Lifecycle.ILifecycleOwner maLifecycleOwner)
+					camera = cameraProvider.BindToLifecycle(maLifecycleOwner, cameraSelector, cameraPreview, imageAnalyzer);
 			}
 		}
 
@@ -163,8 +198,11 @@ namespace ZXing.Net.Maui
 
 		public void Dispose()
 		{
+			Disconnect();
+
 			cameraExecutor?.Shutdown();
 			cameraExecutor?.Dispose();
+			cameraExecutor = null;
 		}
 	}
 }
