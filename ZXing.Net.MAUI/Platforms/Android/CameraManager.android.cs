@@ -193,6 +193,8 @@ namespace ZXing.Net.Maui
 
 				if (previewView.Parent is View parent and not null)
 					parent.Touch += PreviewView_Touch;
+
+				AutoFocus();
 			}
 		}
 
@@ -219,7 +221,7 @@ namespace ZXing.Net.Maui
 
 		public void AutoFocus()
 		{
-
+			Focus(new Point(previewView.LayoutParameters.Width / 2, previewView.LayoutParameters.Height / 2));
 		}
 
 		public void Dispose()
