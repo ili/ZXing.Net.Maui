@@ -75,10 +75,19 @@ namespace ZXing.Net.Maui
 					if (cameraProvider is null)
 						cameraProvider = (ProcessCameraProvider)cameraProviderFuture.Get();
 
-
 					UpdateCamera();
 
 				}), ContextCompat.GetMainExecutor(Context.Context)); //GetMainExecutor: returns an Executor that runs on the main thread.
+			}
+		}
+
+		private void PreviewView_Touch(object sender, NativePlatformView.TouchEventArgs e)
+		{	
+			if (e.Event.Action == MotionEventActions.Down)
+			{
+				var p = new Point((int)e.Event.GetX(), (int)e.Event.GetY());
+				Focus(p);
+				e.Handled = true;
 			}
 		}
 
@@ -97,6 +106,9 @@ namespace ZXing.Net.Maui
 
 			frameAnalyzer?.Dispose();
 			frameAnalyzer = null;
+
+			if (previewView.Parent is View parent and not null)
+				parent.Touch -= PreviewView_Touch;
 
 		}
 
@@ -178,6 +190,9 @@ namespace ZXing.Net.Maui
 				// if not, this should be sufficient as a fallback
 				else if (Microsoft.Maui.ApplicationModel.Platform.CurrentActivity is AndroidX.Lifecycle.ILifecycleOwner maLifecycleOwner)
 					camera = cameraProvider.BindToLifecycle(maLifecycleOwner, cameraSelector, cameraPreview, imageAnalyzer);
+
+				if (previewView.Parent is View parent and not null)
+					parent.Touch += PreviewView_Touch;
 			}
 		}
 
@@ -188,7 +203,18 @@ namespace ZXing.Net.Maui
 
 		public void Focus(Point point)
 		{
+			if (camera?.CameraControl == null)
+				return;
+				
+			camera.CameraControl.CancelFocusAndMetering();
 
+			var factory = new SurfaceOrientedMeteringPointFactory(previewView.LayoutParameters.Width, previewView.LayoutParameters.Height);
+			var fpoint = factory.CreatePoint(point.X, point.Y);
+			var action = new FocusMeteringAction.Builder(fpoint, FocusMeteringAction.FlagAf)
+									.DisableAutoCancel()
+									.Build();
+
+			camera.CameraControl.StartFocusAndMetering(action);
 		}
 
 		public void AutoFocus()
