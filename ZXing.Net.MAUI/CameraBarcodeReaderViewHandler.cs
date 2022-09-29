@@ -14,6 +14,7 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 		[nameof(ICameraBarcodeReaderView.Options)] = MapOptions,
 		[nameof(ICameraBarcodeReaderView.IsDetecting)] = MapIsDetecting,
 		[nameof(ICameraBarcodeReaderView.TargetCaptureResolution)] = MapTargetCaptureResolution,
+		[nameof(ICameraBarcodeReaderView.Visibility)] = (handler, virtualView) => handler.cameraManager.IsVisible = virtualView.Visibility == Visibility.Visible,
 		[nameof(ICameraBarcodeReaderView.IsTorchOn)] = (handler, virtualView) => handler.cameraManager.UpdateTorch(virtualView.IsTorchOn),
 		[nameof(ICameraBarcodeReaderView.CameraLocation)] = (handler, virtualView) => handler.cameraManager.UpdateCameraLocation(virtualView.CameraLocation)
 	};
