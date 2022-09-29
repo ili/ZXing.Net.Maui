@@ -150,7 +150,7 @@ internal partial class CameraManager
 
         var current = new KeyValuePair<NSString, Size>(AVCaptureSession.Preset640x480, new Size(640, 480));
 
-        foreach (var r in availablResolutions)
+        foreach (var r in availablResolutions.Where(r => captureDevice.SupportsAVCaptureSessionPreset(r.Key)))
         {
             if (r.Value.Width >= target.Width && r.Value.Height >= target.Height)
             {
