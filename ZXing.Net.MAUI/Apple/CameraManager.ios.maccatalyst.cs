@@ -1,4 +1,4 @@
-﻿#if IOS || MACCATALYST
+#if IOS || MACCATALYST
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,11 +52,14 @@ internal partial class CameraManager
 		return view;
 	}
 
-	public bool IsVisible
+	public void UpdateIsVisible(bool visible)
 	{
-		get => !view.Hidden;
-		set => view.UpdateVisibility(value ? Visibility.Visible : Visibility.Hidden);
+		view.UpdateVisibility(visible ? Visibility.Visible : Visibility.Hidden);
 	}
+	public void UpdateAutoRotate(bool value)
+	{
+	}
+
 	public void Connect()
 	{
 		UpdateCamera();

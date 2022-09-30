@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui;
@@ -14,7 +14,7 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 		[nameof(ICameraBarcodeReaderView.Options)] = MapOptions,
 		[nameof(ICameraBarcodeReaderView.IsDetecting)] = MapIsDetecting,
 		[nameof(ICameraBarcodeReaderView.TargetCaptureResolution)] = MapTargetCaptureResolution,
-		[nameof(ICameraBarcodeReaderView.Visibility)] = (handler, virtualView) => handler.cameraManager.IsVisible = virtualView.Visibility == Visibility.Visible,
+		[nameof(ICameraBarcodeReaderView.Visibility)] = (handler, virtualView) => handler.cameraManager.UpdateIsVisible(virtualView.Visibility == Visibility.Visible),
 		[nameof(ICameraBarcodeReaderView.IsTorchOn)] = (handler, virtualView) => handler.cameraManager.UpdateTorch(virtualView.IsTorchOn),
 		[nameof(ICameraBarcodeReaderView.CameraLocation)] = (handler, virtualView) => handler.cameraManager.UpdateCameraLocation(virtualView.CameraLocation)
 	};
@@ -70,11 +70,6 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 		base.DisconnectHandler(nativeView);
 	}
 
-	public override void SetVirtualView(IView view)
-	{
-		base.SetVirtualView(view);
-	}
-
 	private void CameraManager_FrameReady(object sender, CameraFrameBufferEventArgs e)
 	{
 		FrameReady?.Invoke(this, e);
@@ -89,7 +84,10 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 	}
 
 	public static void MapOptions(CameraBarcodeReaderViewHandler handler, ICameraBarcodeReaderView cameraBarcodeReaderView)
-		=> handler.BarcodeReader.Options = cameraBarcodeReaderView.Options;
+	{ 
+		handler.BarcodeReader.Options = cameraBarcodeReaderView.Options;
+		handler.cameraManager?.UpdateAutoRotate(cameraBarcodeReaderView.Options.AutoRotate);
+	}
 
 	public static void MapIsDetecting(CameraBarcodeReaderViewHandler handler, ICameraBarcodeReaderView cameraBarcodeReaderView)
 	{ }

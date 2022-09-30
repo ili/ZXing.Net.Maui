@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Android.Content;
 using Android.Graphics;
 using Android.Hardware.Camera2;
@@ -41,6 +41,9 @@ namespace ZXing.Net.Maui
 		ICamera camera;
 		FrameAnalyzer frameAnalyzer;
 		Google.Common.Util.Concurrent.IListenableFuture cameraProviderFuture;
+		bool autoRotate = false;
+		Timer autoFocusTimer;
+		AFTimerTask autoFocusTask;
 
 		public NativePlatformCameraPreviewView CreateNativeView()
 		{
@@ -110,9 +113,19 @@ namespace ZXing.Net.Maui
 			if (previewView.Parent is View parent and not null)
 				parent.Touch -= PreviewView_Touch;
 
+			StopTimer();
 		}
 
-		public bool IsVisible
+		private void StopTimer()
+		{
+			autoFocusTask?.Cancel();
+			autoFocusTimer?.Cancel();
+			autoFocusTimer?.Dispose();
+			autoFocusTimer = null;
+
+		}
+
+		bool IsVisible
 		{
 			get => previewView.Visibility == ViewStates.Visible;
 			set
@@ -122,14 +135,32 @@ namespace ZXing.Net.Maui
 			}
 		}
 
+		public void UpdateIsVisible(bool visible)
+		{
+			if (IsVisible != visible)
+				IsVisible = visible;
+		}
+
 		public MSize TargetCaptureResolution { get; private set; } = MSize.Zero;
 
 		public void UpdateTargetCaptureResolution(MSize targetCaptureResolution)
 		{
-			TargetCaptureResolution = targetCaptureResolution;
+			if (TargetCaptureResolution != targetCaptureResolution)
+			{
+				TargetCaptureResolution = targetCaptureResolution;
 
-			if (cameraProvider is not null)
 				UpdateCamera();
+			}
+		}
+
+		public void UpdateAutoRotate(bool value)
+		{
+			if (autoRotate != value)
+			{
+				autoRotate = value;
+
+				UpdateCamera();
+			}
 		}
 
 		public void UpdateCamera()
@@ -150,13 +181,28 @@ namespace ZXing.Net.Maui
 							})));
 				}
 
-				// Frame by frame analyze
-				imageAnalyzer = new ImageAnalysis.Builder()
-					.SetDefaultResolution(new Android.Util.Size(640, 480))
-					.SetOutputImageRotationEnabled(true)
-					.SetTargetResolution(new Android.Util.Size((int)TargetCaptureResolution.Width, (int)TargetCaptureResolution.Height))
+
+				var builder = new ImageAnalysis.Builder()
+					.SetOutputImageFormat(ImageAnalysis.OutputImageFormatYuv420888)
 					.SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest)
-					.Build();
+					;
+
+				if (autoRotate)
+					builder = builder
+						.SetOutputImageRotationEnabled(true);
+
+				if (TargetCaptureResolution != MSize.Zero)
+					builder = builder
+						.SetDefaultResolution(new Android.Util.Size((int)TargetCaptureResolution.Width, (int)TargetCaptureResolution.Height))
+						.SetTargetResolution(new Android.Util.Size((int)TargetCaptureResolution.Width, (int)TargetCaptureResolution.Height))
+						;
+				else
+					builder = builder
+						.SetTargetResolution(new Android.Util.Size(previewView.Width, previewView.Height))
+						;
+
+				// Frame by frame analyze
+				imageAnalyzer = builder.Build();
 
 				imageAnalyzer.SetAnalyzer(cameraExecutor, frameAnalyzer);
 				
@@ -210,7 +256,7 @@ namespace ZXing.Net.Maui
 				
 			camera.CameraControl.CancelFocusAndMetering();
 
-			var factory = new SurfaceOrientedMeteringPointFactory(previewView.LayoutParameters.Width, previewView.LayoutParameters.Height);
+			var factory = new SurfaceOrientedMeteringPointFactory(previewView.Width, previewView.Height);
 			var fpoint = factory.CreatePoint(point.X, point.Y);
 			var action = new FocusMeteringAction.Builder(fpoint, FocusMeteringAction.FlagAf)
 									.DisableAutoCancel()
@@ -221,7 +267,18 @@ namespace ZXing.Net.Maui
 
 		public void AutoFocus()
 		{
-			Focus(new Point(previewView.LayoutParameters.Width / 2, previewView.LayoutParameters.Height / 2));
+			if (camera?.CameraControl == null)
+				return;
+
+			var x = previewView.Width / 2;
+			var y = previewView.Height / 2;
+			Focus(new Point(x, y));
+
+			StopTimer();
+
+			autoFocusTimer = new Timer();
+			autoFocusTask = new AFTimerTask(this);
+			autoFocusTimer.Schedule(autoFocusTask, 1000);
 		}
 
 		public void Dispose()
@@ -231,6 +288,21 @@ namespace ZXing.Net.Maui
 			cameraExecutor?.Shutdown();
 			cameraExecutor?.Dispose();
 			cameraExecutor = null;
+		}
+
+		private class AFTimerTask : TimerTask
+		{
+			private CameraManager cameraManager;
+
+			public AFTimerTask(CameraManager manager)
+			{
+				this.cameraManager = manager;
+			}
+
+			public override void Run()
+			{
+				cameraManager.AutoFocus();
+			}
 		}
 	}
 }

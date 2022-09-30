@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Maui;
 using Microsoft.Maui.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,15 +30,18 @@ namespace ZXing.Net.Maui
 
 		public Size TargetCaptureResolution { get; private set; } = Size.Zero;
 
-		public bool IsVisible
+		public void UpdateIsVisible(bool visible)
 		{
-			get => false;
-			set => LogUnsupported();
+			LogUnsupported();
 		}
 
 		public void UpdateTargetCaptureResolution(Size targetCaptureResolution)
 		{
+			LogUnsupported();
 		}
+
+		public void UpdateAutoRotate(bool value)
+			=> LogUnsupported();
 
 		public void Connect()
 			=> LogUnsupported();
