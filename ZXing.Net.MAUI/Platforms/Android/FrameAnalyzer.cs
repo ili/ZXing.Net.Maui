@@ -1,4 +1,4 @@
-﻿using AndroidX.Camera.Core;
+using AndroidX.Camera.Core;
 using Java.Nio;
 using Microsoft.Maui.Graphics;
 using System;
@@ -7,20 +7,16 @@ namespace ZXing.Net.Maui
 {
 	internal class FrameAnalyzer : Java.Lang.Object, ImageAnalysis.IAnalyzer
 	{
-		readonly Action<ByteBuffer, Size> frameCallback;
+		readonly Action<IImageProxy> frameCallback;
 
-		public FrameAnalyzer(Action<ByteBuffer, Size> callback)
+		public FrameAnalyzer(Action<IImageProxy> callback)
 		{
 			frameCallback = callback;
 		}
 
 		public void Analyze(IImageProxy image)
 		{
-			var buffer = image.GetPlanes()[0].Buffer;
-
-			var s = new Size(image.Width, image.Height);
-
-			frameCallback?.Invoke(buffer, s);
+			frameCallback?.Invoke(image);
 
 			image.Close();
 		}

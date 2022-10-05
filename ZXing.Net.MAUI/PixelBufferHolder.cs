@@ -1,8 +1,8 @@
-﻿using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Graphics;
 
 namespace ZXing.Net.Maui.Readers
 {
-	public record PixelBufferHolder
+	public class PixelBufferHolder
 	{
 		public Size Size { get; init; }
 
@@ -17,5 +17,9 @@ namespace ZXing.Net.Maui.Readers
 #endif
 
 		Data { get; init; }
+
+#if ANDROID
+		public AndroidX.Camera.Core.IImageProxy Image { get; init; }
+#endif
 	}
 }

@@ -1,11 +1,11 @@
-﻿using Java.Nio;
+using Java.Nio;
 using System;
 
 namespace ZXing.Net.Maui
 {
 	public sealed class ByteBufferYUVLuminanceSource : BaseLuminanceSource
 	{
-		protected readonly ByteBuffer Yuv;
+		protected readonly byte[] Yuv;
 		protected readonly int DataWidth;
 		protected readonly int DataHeight;
 		protected readonly int Left;
@@ -22,7 +22,7 @@ namespace ZXing.Net.Maui
 		/// <param name="width">The width.</param>
 		/// <param name="height">The height.</param>
 		/// <param name="reverseHoriz">if set to <c>true</c> [reverse horiz].</param>
-		public ByteBufferYUVLuminanceSource(ByteBuffer yuv,
+		public ByteBufferYUVLuminanceSource(byte[] yuv,
 			int dataWidth,
 			int dataHeight,
 			int left,
@@ -47,7 +47,6 @@ namespace ZXing.Net.Maui
 			{
 				throw new ArgumentException("Crop rectangle does not fit within image data.");
 			}
-
 			Yuv = yuv;
 			DataWidth = dataWidth;
 			DataHeight = dataHeight;
@@ -79,8 +78,10 @@ namespace ZXing.Net.Maui
 
 			var offset = (y + Top) * DataWidth + Left;
 
-			Yuv.Position(offset);
-			_ = Yuv.Get(row, 0, width);
+			Array.Copy(Yuv, offset, row, 0, width);
+
+			//Yuv.Position(offset);
+			//_ = Yuv.Get(row, 0, width);
 			
 			return row;
 		}
@@ -99,8 +100,9 @@ namespace ZXing.Net.Maui
 				// If the width matches the full width of the underlying data, perform a single copy.
 				if (width == DataWidth)
 				{
-					Yuv.Position(inputOffset);
-					_ = Yuv.Get(matrix, 0, area);
+					//Yuv.Position(inputOffset);
+					//_ = Yuv.Get(matrix, 0, area);
+					Array.Copy(Yuv, inputOffset, matrix, 0, area);
 					return matrix;
 				}
 
@@ -108,8 +110,9 @@ namespace ZXing.Net.Maui
 				for (var y = 0; y < height; y++)
 				{
 					var outputOffset = y * width;
-					Yuv.Position(inputOffset);
-					_ = Yuv.Get(matrix, outputOffset, width);
+					//Yuv.Position(inputOffset);
+					//_ = Yuv.Get(matrix, outputOffset, width);
+					Array.Copy(Yuv, inputOffset, matrix, outputOffset, width);
 					inputOffset += DataWidth;
 				}
 				return matrix;

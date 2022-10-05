@@ -39,6 +39,7 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 	CameraManager cameraManager;
 
 	Readers.IBarcodeReader barcodeReader;
+	private static BarcodeReaderOptions _options;
 
 	protected Readers.IBarcodeReader BarcodeReader
 		=> barcodeReader ??= Services.GetService<Readers.IBarcodeReader>();
@@ -74,18 +75,26 @@ public partial class CameraBarcodeReaderViewHandler : ViewHandler<ICameraBarcode
 	{
 		FrameReady?.Invoke(this, e);
 
-		if (VirtualView.IsDetecting)
+		if (VirtualView.IsDetecting && BarcodesDetected != null)
 		{
-			var barcodes = BarcodeReader.Decode(e.Data);
+			foreach (var r in Services.GetServices<Readers.IBarcodeReader>())
+			{
+				r.Options = _options;
+				var barcodes = r.Decode(e.Data);
 
-			if (barcodes?.Any() ?? false)
-				BarcodesDetected?.Invoke(this, new BarcodeDetectionEventArgs(barcodes));
+				if (barcodes?.Any() ?? false)
+				{
+					BarcodesDetected?.Invoke(this, new BarcodeDetectionEventArgs(barcodes));
+					break;
+				}
+			}
 		}
 	}
 
 	public static void MapOptions(CameraBarcodeReaderViewHandler handler, ICameraBarcodeReaderView cameraBarcodeReaderView)
 	{ 
 		handler.BarcodeReader.Options = cameraBarcodeReaderView.Options;
+		_options = cameraBarcodeReaderView.Options;
 		handler.cameraManager?.UpdateAutoRotate(cameraBarcodeReaderView.Options.AutoRotate);
 	}
 

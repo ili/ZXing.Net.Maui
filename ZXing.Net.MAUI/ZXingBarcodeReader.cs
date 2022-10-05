@@ -34,7 +34,12 @@ namespace ZXing.Net.Maui.Readers
 			LuminanceSource ls = default;
 
 #if ANDROID
-			ls = new ByteBufferYUVLuminanceSource(image.Data, w, h, 0, 0, w, h);
+			image.Data.Rewind();
+			var yuv = new byte[image.Data.Remaining()];
+			image.Data.Get(yuv, 0, yuv.Length);
+
+			//ls = new ByteBufferYUVLuminanceSource(yuv, w, h, 0, 0, w, h);
+			ls = new PlanarYUVLuminanceSource(yuv, w, h, 0, 0, w, h, false);
 #elif MACCATALYST || IOS
 			ls = new CVPixelBufferBGRA32LuminanceSource(image.Data, w, h);
 #endif

@@ -171,13 +171,14 @@ namespace ZXing.Net.Maui
 			{
 				if (frameAnalyzer is null)
 				{
-					frameAnalyzer = new FrameAnalyzer((buffer, size) =>
+					frameAnalyzer = new FrameAnalyzer((image) =>
 						FrameReady?.Invoke(
 							this,
 							new CameraFrameBufferEventArgs(new Readers.PixelBufferHolder
 							{
-								Data = buffer,
-								Size = size
+								Data = image.GetPlanes()[0].Buffer,
+								Size = new Microsoft.Maui.Graphics.Size(image.Width, image.Height),
+								Image = image
 							})));
 				}
 
@@ -240,7 +241,7 @@ namespace ZXing.Net.Maui
 				if (previewView.Parent is View parent and not null)
 					parent.Touch += PreviewView_Touch;
 
-				AutoFocus();
+				//AutoFocus();
 			}
 		}
 
